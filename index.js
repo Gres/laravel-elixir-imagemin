@@ -50,5 +50,5 @@ Elixir.extend('imagemin', function() {
 var prepGulpPaths = function(src, output) {
     return new Elixir.GulpPaths()
         .src(src || config.get('assets.images.folder'))
-        .output(output || config.get('assets.images.outputFolder'));
+        .output(output || config.get('public.images.outputFolder'));
 };
