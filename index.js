@@ -1,11 +1,12 @@
-var elixir = require('laravel-elixir');
+var Elixir = require('laravel-elixir');
 var gulp = require('gulp');
 var imagemin = require('gulp-imagemin');
 var pngquant = require('imagemin-pngquant');
+var changed = require('gulp-changed');
 var notify = require('gulp-notify');
 var _ = require('underscore');
-var utilities = require('laravel-elixir/ingredients/commands/Utilities');
-
+var config = Elixir.config;
+var path = require('path');
 /*
  |----------------------------------------------------------------
  | ImageMin Processor
@@ -17,40 +18,37 @@ var utilities = require('laravel-elixir/ingredients/commands/Utilities');
  | Minify PNG, JPEG, GIF and SVG images
  |
  */
+var gulpTask = function(src, output, options) {
 
-elixir.extend('imagemin', function(src, output, options) {
-
-    var config = this;
-
-    var baseDir = config.assetsDir + 'img';
-
-    src = utilities.buildGulpSrc(src, baseDir, '**/*');
-
-    options = _.extend({
-        progressive: true,
-        svgoPlugins: [{removeViewBox: false}],
-        use: [pngquant()]
-    }, options);
-
-    gulp.task('imagemin', function() {
-        return gulp.src(src)
+    new Elixir.Task('imagemin', function() {
+        var paths = prepGulpPaths(src, output);
+        this.log(paths.src, paths.output);
+        return gulp.src(paths.src.path)
+            .pipe(changed(paths.output.path))
             .pipe(imagemin(options))
-            .pipe(gulp.dest(output || 'public/img'))
+            .pipe(gulp.dest(paths.output.path))
             .on('error', notify.onError({
                 title: 'ImageMin Failed!',
                 message: 'Failed to optimise images.',
                 icon: __dirname + '/../laravel-elixir/icons/fail.png'
             }));
-    });
+    })
+    .watch(config.get('assets.images.folder') + '/**/*.+(png|gif|svg|jpg|jpeg)');
+};
 
-    this.registerWatcher('imagemin', [
-        baseDir + '/**/*.png',
-        baseDir + '/**/*.gif',
-        baseDir + '/**/*.svg',
-        baseDir + '/**/*.jpg',
-        baseDir + '/**/*.jpeg'
-    ]);
-
-    return this.queueTask('imagemin');
-
+Elixir.extend('imagemin', function() {
+    gulpTask.apply(this, arguments);
 });
+
+/**
+ * Prep the Gulp src and output paths.
+ *
+ * @param  {string|array} src
+ * @param  {string|null}  output
+ * @return {object}
+ */
+var prepGulpPaths = function(src, output) {
+    return new Elixir.GulpPaths()
+        .src(src || config.get('assets.images.folder'))
+        .output(output || config.get('assets.images.outputFolder'));
+};
